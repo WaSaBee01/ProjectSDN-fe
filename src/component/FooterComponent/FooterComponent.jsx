@@ -63,7 +63,7 @@ const FooterComponent = ({ children }) => {
                         </SocialIcons>
                     </FooterSection>
                 </FooterContent>
-                <FooterBottom>&copy; {new Date().getFullYear()} Your Store. All rights reserved.</FooterBottom>
+                <FooterBottom>&copy; {new Date().getFullYear()} EStore. All rights reserved.</FooterBottom>
             </FooterContainer>
         </PageContainer>
     );

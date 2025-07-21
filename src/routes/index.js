@@ -1,5 +1,6 @@
 import AdminPage from "../pages/AdminPage/AdminPage";
 import FavoritePage from "../pages/FavoritePage/FavoritePage";
+import ForgotPassword from "../pages/ForgotPassword/ForgotPassword";
 import HomePage from "../pages/HomePage/HomePage";
 import MyOrder from "../pages/MyOrder/MyOrder";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
@@ -97,6 +98,10 @@ export const routes = [
     path: "/favorite",
     page: FavoritePage,
     isShowHeader: true,
+  },
+  {
+    path: "/forgot-password",
+    page: ForgotPassword,
   },
 
   {

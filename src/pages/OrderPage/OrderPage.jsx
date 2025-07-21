@@ -171,16 +171,20 @@ const OrderPage = () => {
   const { isLoading, data } = mutationUpdate
 
   const handleUpdate = () => {
-    const { name, phone, address, city } = stateUserDetail
-    if (name && phone && address && city) {
-      mutationUpdate.mutate({ id: user?.id, token: user?.access_token, ...stateUserDetail }, {
-        onSuccess: () => {
-          dispatch(updateUser({ name, phone, address, city }))
-          setIsOpenModalUpdate(false)
-        }
-      })
-    }
+  const { name, phone, address, city } = stateUserDetail
+  if (name && phone && address && city) {
+    mutationUpdate.mutate({ id: user?.id, token: user?.access_token, ...stateUserDetail }, {
+      onSuccess: (data) => {
+        dispatch(updateUser({
+          ...user,        // giữ lại token, id, email...
+          ...data?.data,  // cập nhật field mới
+        }));
+        setIsOpenModalUpdate(false)
+      }
+    })
   }
+}
+
 
   const handleOnchangeDetail = (e) => {
     setStateUserDetail({

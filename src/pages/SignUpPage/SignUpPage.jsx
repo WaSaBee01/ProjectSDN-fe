@@ -18,29 +18,21 @@ const SignUpPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [emailError, setEmailError] = useState(''); // New state for email error
+  const [emailError, setEmailError] = useState(''); 
 
   const mutation = useMutationHook(data => UserService.signupUser(data));
   const { data, isLoading, isSuccess, isError } = mutation;
 
-  useEffect(() => {
-    if (isSuccess) {
-      message.success();
-      handelNavigateSignIn();
-    } else if (isError) {
-      message.error();
-    }
-  }, [isSuccess, isError]);
+  
 
   const handleOnChangeEmail = (value) => {
     setEmail(value);
 
-    // Regular expression for email validation
     const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
     if (!emailRegex.test(value)) {
-      setEmailError('Invalid email format'); // Set error message if email is invalid
+      setEmailError('Invalid email format'); 
     } else {
-      setEmailError(''); // Clear error message if email is valid
+      setEmailError('');
     }
   };
 
@@ -57,13 +49,27 @@ const SignUpPage = () => {
   };
 
   const handleSigup = () => {
-    // Check if email is valid before submitting
-    if (emailError) {
-      return;
+  if (emailError) {
+    return;
+  }
+  mutation.mutate(
+    { email, password, confirmPassword },
+    {
+      onSuccess: (res) => {
+        if (res.status === "OK") {
+          message.success(res.message || "Đăng ký thành công!");
+          handelNavigateSignIn();
+        } else {
+          message.error(res.message || "Đăng ký thất bại!");
+        }
+      },
+      onError: (err) => {
+        message.error("Đăng ký lỗi hệ thống!");
+      },
     }
+  );
+};
 
-    mutation.mutate({ email, password, confirmPassword });
-  };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.53)', height: '100vh' }}>
@@ -78,7 +84,7 @@ const SignUpPage = () => {
             value={email}
             onChange={handleOnChangeEmail}
           />
-          {emailError && <span style={{ color: 'red' }}>{emailError}</span>} {/* Display email error */}
+          {emailError && <span style={{ color: 'red' }}>{emailError}</span>} 
 
           <div style={{ position: 'relative' }}>
             <span
@@ -90,7 +96,6 @@ const SignUpPage = () => {
                 right: '8px'
               }}
             >
-              {/* Toggle password visibility icons */}
             </span>
 
             <InputForm
@@ -112,7 +117,6 @@ const SignUpPage = () => {
                 right: '8px'
               }}
             >
-              {/* Toggle confirm password visibility icons */}
             </span>
             <InputForm
               placeholder="confirm password"

@@ -127,6 +127,7 @@ const SignInPage = () => {
 
 
           <p>Chưa có tài khoản? <WrapperTextLight onClick={handleNavigateSignup}>Tạo tài khoản</WrapperTextLight></p>
+          <p>Quên mật khẩu? <WrapperTextLight onClick={handleNavigateForgotPassword}>Lấy lại mật khẩu</WrapperTextLight></p>
 
         </WrapperContainerLeft>
 
