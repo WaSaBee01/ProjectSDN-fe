@@ -70,3 +70,40 @@ export const updateUser = async (id, data, access_token) => {
     return res.data
 }
 
+export const addFavorite = async (userId, productId, access_token) => {
+    const res = await axiosJWT.post(
+        `${process.env.REACT_APP_API_URL}/user/add-favorite`,
+        { userId, productId },
+        {
+            headers: {
+                token: `Bearer ${access_token}`
+            }
+        }
+    );
+    return res.data;
+};
+
+export const removeFavorite = async (userId, productId, access_token) => {
+    const res = await axiosJWT.post(
+        `${process.env.REACT_APP_API_URL}/user/remove-favorite`,
+        { userId, productId },
+        {
+            headers: {
+                token: `Bearer ${access_token}`
+            }
+        }
+    );
+    return res.data;
+};
+
+export const getFavorites = async (userId, access_token) => {
+    const res = await axiosJWT.get(
+        `${process.env.REACT_APP_API_URL}/user/favorites/${userId}`,
+        {
+            headers: {
+                token: `Bearer ${access_token}`
+            }
+        }
+    );
+    return res.data;
+};

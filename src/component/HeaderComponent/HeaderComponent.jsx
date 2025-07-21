@@ -39,6 +39,7 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
     const content = (
         <div>
             <WrapperContentPopup onClick={() => handleClick('profile')}>Thông tin người dùng</WrapperContentPopup>
+            <WrapperContentPopup onClick={() => handleClick('favorite')}>Sản phẩm yêu thích</WrapperContentPopup>
             {user?.isAdmin && (
                 <WrapperContentPopup onClick={() => handleClick('admin')}>Quản lý hệ thống</WrapperContentPopup>
             )}
@@ -52,6 +53,8 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
     const handleClick = (type) => {
         if (type === 'profile') {
             navigate('/profile-user')
+        } else if (type === 'favorite') {
+            navigate('/favorite')
         } else if (type === 'admin') {
             navigate('/system/admin')
         } else if (type === 'my-order') {

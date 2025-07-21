@@ -1,10 +1,9 @@
-import { Col, Image, Rate, Row } from 'antd'
-import React, { useEffect, useMemo, useState } from 'react'
-import smalliporn from '../../assets/images/smalliporn1.webp'
-import { WrapperAdressProduct, WrapperInputNumber, WrapperPriceProduct, WrapperPriceTextProduct, WrapperQualityProduct, WrapperStyleColImage, WrapperStyleNameProduct, WrapperStyleSmallImage, WrapperStyleTextSell } from './style'
-import { MinusOutlined, PlusOutlined } from '@ant-design/icons'
+import { Col, Image, Rate, Row, Badge } from 'antd'
+import React, { useEffect, useState } from 'react'
+import { MinusOutlined, PlusOutlined, HeartFilled, HeartOutlined } from '@ant-design/icons'
 import ButtonComponent from '../ButtonComponent/ButtonComponent'
 import * as ProductService from '../../services/ProductService'
+import * as UserService from '../../services/UserService'
 import { useQuery } from '@tanstack/react-query'
 import Loading from '../LoadingComponent/Loading'
 import { useDispatch, useSelector } from 'react-redux'
@@ -15,7 +14,6 @@ import * as message from '../../component/Message/Message'
 import LikeButtonComponent from '../LikeButtonComponent/LikeButtonComponent'
 import CommentComponent from '../CommentComponent/CommentComponent'
 
-
 const ProductDetailsComponent = ({ idProduct }) => {
     const [numProduct, setNumProduct] = useState(1)
     const [errorLimitOrder, setErrorLimitOrder] = useState(false)
@@ -24,10 +22,10 @@ const ProductDetailsComponent = ({ idProduct }) => {
     const navigate = useNavigate()
     const location = useLocation()
     const dispatch = useDispatch()
+    const [isFavorite, setIsFavorite] = useState(false)
+    const [favorites, setFavorites] = useState([])
 
-    const onChange = (value) => {
-        setNumProduct(Number(value))
-    }
+    const onChange = (value) => setNumProduct(Number(value))
 
     const fetchGetProductDetail = async (context) => {
         const id = context?.queryKey && context?.queryKey[1]
@@ -35,11 +33,7 @@ const ProductDetailsComponent = ({ idProduct }) => {
         return res.data
     }
 
-
-
-    useEffect(() => {
-        initFacebookSDK()
-    }, [])
+    useEffect(() => { initFacebookSDK() }, [])
 
     useEffect(() => {
         const orderRedux = order?.orderItems?.find((item) => item?.product === productDetail?._id)
@@ -54,25 +48,31 @@ const ProductDetailsComponent = ({ idProduct }) => {
         if (order.isSuccessOrder) {
             message.success('Thêm sản phẩm vào giỏ hàng thành công')
         }
-        return () => {
-            dispatch(resetOrder())
-        }
-
+        return () => { dispatch(resetOrder()) }
     }, [order.isSuccessOrder])
+
+    const { isLoading, data: productDetail } = useQuery(['products-detail', idProduct], fetchGetProductDetail, { enabled: !!idProduct })
+
+    useEffect(() => {
+        const fetchFavorites = async () => {
+            if (user?.id && user?.access_token && productDetail?._id) {
+                const res = await UserService.getFavorites(user.id, user.access_token)
+                setFavorites(res?.data || [])
+                setIsFavorite((res?.data || []).some(item => item._id === productDetail._id))
+            } else {
+                setIsFavorite(false)
+            }
+        }
+        fetchFavorites()
+    }, [user?.id, user?.access_token, productDetail?._id])
 
     const handleChangeCount = (type, limit) => {
         if (type === 'increase') {
-            if (!limit) {
-                setNumProduct(numProduct + 1)
-            }
+            if (!limit) setNumProduct(numProduct + 1)
         } else {
-            if (!limit) {
-                setNumProduct(numProduct - 1)
-            }
+            if (!limit) setNumProduct(numProduct - 1)
         }
     }
-
-    const { isLoading, data: productDetail } = useQuery(['products-detail', idProduct], fetchGetProductDetail, { enabled: !!idProduct })
 
     const handleAddToCart = () => {
         if (!user?.id) {
@@ -89,13 +89,35 @@ const ProductDetailsComponent = ({ idProduct }) => {
                         product: productDetail?._id,
                         discount: productDetail?.discount,
                         countInStock: productDetail?.countInStock,
-
                     }
                 }))
             } else {
                 setErrorLimitOrder(true)
             }
+        }
+    }
 
+    const handleToggleFavorite = async () => {
+        if (!user?.id) {
+            navigate('/sign-in', { state: location?.pathname })
+            return
+        }
+        if (isFavorite) {
+            const res = await UserService.removeFavorite(user.id, productDetail._id, user.access_token)
+            if (res.status === 'OK') {
+                setIsFavorite(false)
+                message.success('Đã bỏ khỏi yêu thích!')
+            } else {
+                message.error(res.message || "Lỗi khi bỏ khỏi yêu thích!")
+            }
+        } else {
+            const res = await UserService.addFavorite(user.id, productDetail._id, user.access_token)
+            if (res.status === 'OK') {
+                setIsFavorite(true)
+                message.success('Đã thêm vào yêu thích!')
+            } else {
+                message.error(res.message || "Lỗi khi thêm vào yêu thích!")
+            }
         }
     }
 
@@ -106,37 +128,61 @@ const ProductDetailsComponent = ({ idProduct }) => {
                     <Image src={productDetail?.image} alt="image product" preview={false} />
                 </Col>
                 <Col span={14} style={{ paddingLeft: '10px' }}>
-                    <WrapperStyleNameProduct>{productDetail?.name}</WrapperStyleNameProduct>
+                    <h1 style={{ fontSize: 24, fontWeight: 500 }}>{productDetail?.name}</h1>
                     <div>
                         <Rate allowHalf defaultValue={productDetail?.rating} value={productDetail?.rating} />
-                        <WrapperStyleTextSell> | Đã bán 9090909099+</WrapperStyleTextSell>
+                        <span style={{ fontSize: 15, color: '#888' }}> | Đã bán 9090909099+</span>
                     </div>
-                    <WrapperPriceProduct>
-                        <WrapperPriceTextProduct>{convertPrice(productDetail?.price)}</WrapperPriceTextProduct>
-                    </WrapperPriceProduct>
-
-                    <WrapperAdressProduct>
-                        <span>  Giao đến  </span>
-                        <span className='address'> {user?.address} -</span>
-                        <span className='change-address'> Đổi địa chỉ</span>
-                    </WrapperAdressProduct>
-                    <LikeButtonComponent
-                        dataHref={process.env.REACT_APP_IS_LOCAL ? "https://developers.facebook.com/docs/plugins/" : window.location.href}
-                    />
+                    <div style={{ background: '#fafafa', borderRadius: 4, margin: "12px 0" }}>
+                        <h1 style={{ fontSize: 32, fontWeight: 500, marginRight: 8, padding: 10 }}>
+                            {convertPrice(productDetail?.price)}
+                        </h1>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                        <span>Giao đến </span>
+                        <span style={{ textDecoration: 'underline', fontWeight: 500 }}>{user?.address}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                        <ButtonComponent
+                            size={20}
+                            styleButton={{
+                                background: isFavorite ? "#fff0f6" : "#fff",
+                                height: 40,
+                                width: 40,
+                                border: "1.5px solid #ff4d6d",
+                                borderRadius: "50%",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                            }}
+                            onClick={handleToggleFavorite}
+                            textbutton={
+                                isFavorite ?
+                                    <HeartFilled style={{ color: 'red', fontSize: 22 }} /> :
+                                    <HeartOutlined style={{ color: '#ff4d6d', fontSize: 22 }} />
+                            }
+                        />
+                        <span style={{ color: "#ff4d6d", fontWeight: 500 }}>{isFavorite ? "Đã yêu thích" : "Thêm vào yêu thích"}</span>
+                    </div>
                     <div style={{ margin: '10px 0 20px', padding: '10px 0', borderTop: '1px solid #e5e5e5', borderBottom: '1px solid #e5e5e5' }}>
                         <div style={{ marginBottom: '10px' }}>Số Lượng</div>
-                        <WrapperQualityProduct>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', width: 100, border: '1px solid #ccc', borderRadius: 4 }}>
                             <button style={{ border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => handleChangeCount('decrease', numProduct === 1)}>
                                 <MinusOutlined style={{ color: '#000', fontSize: '20px' }} />
                             </button>
-
-                            <WrapperInputNumber onChange={onChange} defaultValue={1} min={1} max={productDetail?.countInStock} value={numProduct} size='small' />
-
+                            <input
+                                style={{ width: 40, border: 'none', textAlign: 'center' }}
+                                type="number"
+                                value={numProduct}
+                                min={1}
+                                max={productDetail?.countInStock}
+                                onChange={e => setNumProduct(Number(e.target.value))}
+                            />
                             <button style={{ border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => handleChangeCount('increase', numProduct === productDetail?.countInStock)} >
                                 <PlusOutlined style={{ color: '#000', fontSize: '20px' }} />
                             </button>
-
-                        </WrapperQualityProduct>
+                        </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div>
@@ -152,10 +198,9 @@ const ProductDetailsComponent = ({ idProduct }) => {
                                 onClick={handleAddToCart}
                                 textbutton={'Chọn Mua'}
                                 styleTextButton={{ color: '#fff', fontSize: '16px', fontWeight: 500 }}
-                            ></ButtonComponent>
-                            {errorLimitOrder && <div style={{ color: 'red' }}>Sản phẩm đã hêt hàng</div>}
+                            />
+                            {errorLimitOrder && <div style={{ color: 'red' }}>Sản phẩm đã hết hàng</div>}
                         </div>
-
                         <ButtonComponent
                             size={20}
                             styleButton={{
@@ -167,8 +212,7 @@ const ProductDetailsComponent = ({ idProduct }) => {
                             }}
                             textbutton={'Mua Trả Sau'}
                             styleTextButton={{ color: 'rgb(13, 92, 182)', fontSize: '16px' }}
-                        ></ButtonComponent>
-
+                        />
                     </div>
                 </Col>
                 <CommentComponent
@@ -178,7 +222,6 @@ const ProductDetailsComponent = ({ idProduct }) => {
                 />
             </Row>
         </Loading>
-
     )
 }
 
