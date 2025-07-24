@@ -155,26 +155,54 @@ const PaymentPage = () => {
     const { isLoading, data } = mutationUpdate
     const { data: dataAdd, isLoading: isLoadingAddOrder, isSuccess, isError } = mutationAddOrder
 
-    useEffect(() => {
-        if (isSuccess && dataAdd?.status === 'OK') {
-            const arrayOrdered = []
-            order?.orderItemsSelected?.forEach(element => {
-                arrayOrdered.push(element.product)
-            })
-            dispatch(removeAllFromCart({ listChecked: arrayOrdered }))
-            message.success('Đặt hàng thành công')
-            navigate('/orderSuccess', {
-                state: {
-                    delivery,
-                    payment,
-                    orders: order?.orderItemsSelected,
-                    totalPriceMemo: totalPriceMemo
-                }
-            })
-        } else if (isError) {
-            message.error()
-        }
-    }, [isSuccess, isError, dataAdd, order, dispatch, delivery, payment, totalPriceMemo, navigate])
+    // useEffect(() => {
+    //     if (isSuccess && dataAdd?.status === 'OK') {
+    //         const arrayOrdered = []
+    //         order?.orderItemsSelected?.forEach(element => {
+    //             arrayOrdered.push(element.product)
+    //         })
+    //         dispatch(removeAllFromCart({ listChecked: arrayOrdered }))
+    //         message.success('Đặt hàng thành công')
+    //         navigate('/orderSuccess', {
+    //             state: {
+    //                 delivery,
+    //                 payment,
+    //                 orders: order?.orderItemsSelected,
+    //                 totalPriceMemo: totalPriceMemo
+    //             }
+    //         })
+    //     } else if (isError) {
+    //         message.error()
+    //     }
+    // }, [isSuccess, isError, dataAdd, order, dispatch, delivery, payment, totalPriceMemo, navigate])
+
+
+useEffect(() => {
+    if (isSuccess && dataAdd?.status === 'OK' && dataAdd.order?._id) {
+        const arrayOrdered = []
+        order?.orderItemsSelected?.forEach(element => {
+            arrayOrdered.push(element.product)
+        })
+        dispatch(removeAllFromCart({ listChecked: arrayOrdered }))
+        message.success('Đặt hàng thành công')
+
+        // Lưu orderId vào localStorage để phòng trường hợp F5 hoặc vào lại trang
+        localStorage.setItem("orderSuccessId", dataAdd.order._id);
+
+        // Navigate truyền kèm orderId
+        navigate('/orderSuccess', {
+            state: {
+                orderId: dataAdd.order._id,
+            }
+        })
+    } else if (isError) {
+        message.error()
+    }
+}, [isSuccess, isError, dataAdd, order, dispatch, delivery, payment, totalPriceMemo, navigate]);
+
+
+
+
 
     const handleUpdate = () => {
         const { name, phone, address, city } = stateUserDetail
