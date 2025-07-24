@@ -14,8 +14,9 @@ import { updateUser } from '../../redux/slides/userSlice'
 import * as OrderService from '../../services/OrderService'
 import { useNavigate } from 'react-router-dom'
 import { removeAllFromCart } from '../../redux/slides/orderSlice'
-import { PayPalButton } from "react-paypal-button-v2";
 import * as PaymentService from '../../services/PaymentService'
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js"
+
 const PaymentPage = () => {
     const order = useSelector((state) => state.order)
     const user = useSelector((state) => state.user)
@@ -25,7 +26,7 @@ const PaymentPage = () => {
     const [payment, setPayment] = useState()
     const [delivery, setDelivery] = useState()
     const navigate = useNavigate()
-    const [sdkReady, setSdkReady] = useState(false)
+    const [clientId, setClientId] = useState("")
     const [stateUserDetail, setStateUserDetail] = useState({
         name: '',
         phone: '',
@@ -42,7 +43,7 @@ const PaymentPage = () => {
                 city: user?.city
             })
         }
-    }, [isOpenModalUpdate])
+    }, [isOpenModalUpdate, user])
 
     const handleChangeAddress = () => {
         setIsOpenModalUpdate(true)
@@ -52,6 +53,14 @@ const PaymentPage = () => {
         form.setFieldsValue(stateUserDetail)
     }, [form, stateUserDetail])
 
+    // Lấy client id paypal từ server
+    useEffect(() => {
+        const fetchClientId = async () => {
+            const { data } = await PaymentService.getConfig()
+            setClientId(data)
+        }
+        fetchClientId()
+    }, [])
 
     const priceMemo = useMemo(() => {
         const result = order?.orderItemsSelected?.reduce((total, cur) => {
@@ -83,7 +92,6 @@ const PaymentPage = () => {
     const totalPriceMemo = useMemo(() => {
         return Number(priceMemo) - Number(priceDiscountMemo) + Number(deliveryMemo)
     }, [priceMemo, priceDiscountMemo, deliveryMemo])
-
 
     const handleAddOrder = () => {
         if (user?.access_token && order?.orderItemsSelected && user?.name
@@ -130,7 +138,6 @@ const PaymentPage = () => {
                 token)
             return res
         }
-
     )
 
     const mutationAddOrder = useMutationHook(
@@ -143,7 +150,6 @@ const PaymentPage = () => {
                 { ...rests }, token)
             return res
         }
-
     )
 
     const { isLoading, data } = mutationUpdate
@@ -168,7 +174,7 @@ const PaymentPage = () => {
         } else if (isError) {
             message.error()
         }
-    }, [isSuccess, isError])
+    }, [isSuccess, isError, dataAdd, order, dispatch, delivery, payment, totalPriceMemo, navigate])
 
     const handleUpdate = () => {
         const { name, phone, address, city } = stateUserDetail
@@ -217,26 +223,6 @@ const PaymentPage = () => {
             }
         )
     }
-
-    const addPaypalScript = async () => {
-        const { data } = await PaymentService.getConfig()
-        const script = document.createElement('script')
-        script.type = 'text/javascript'
-        script.src = `https://sandbox.paypal.com/sdk/js?client-id=${data}`
-        script.async = true;
-        script.onload = () => {
-            setSdkReady(true)
-        }
-        document.body.appendChild(script)
-    }
-
-    useEffect(() => {
-        if (!window.paypal) {
-            addPaypalScript()
-        } else {
-            setSdkReady(true)
-        }
-    }, [])
 
     return (
         <div style={{ background: '#fff', width: '100%', height: '100vh' }}>
@@ -317,19 +303,32 @@ const PaymentPage = () => {
                                     </span>
                                 </WrapperTotal>
                             </div>
-
-                            {payment === 'paypal' && sdkReady ? (
+                            {/* Phần nút Paypal mới */}
+                            {payment === 'paypal' && clientId ? (
                                 <div style={{ width: '320px' }}>
-                                    <PayPalButton
-                                        amount={Math.round(totalPriceMemo / 25000)}
-                                        // shippingPreference="NO_SHIPPING" // default is "GET_FROM_FILE"
-                                        onSuccess={onSuccessPaypal}
-                                        onError={() => {
-                                            alert('error')
-                                        }}
-                                    />
+                                    <PayPalScriptProvider options={{ "client-id": clientId, currency: "USD" }}>
+                                        <PayPalButtons
+                                            style={{ layout: "vertical" }}
+                                            forceReRender={[totalPriceMemo]}
+                                            createOrder={(data, actions) => {
+                                                return actions.order.create({
+                                                    purchase_units: [{
+                                                        amount: {
+                                                            value: (Math.round(totalPriceMemo / 25000)).toString(),
+                                                        },
+                                                    }],
+                                                });
+                                            }}
+                                            onApprove={async (data, actions) => {
+                                                const details = await actions.order.capture();
+                                                onSuccessPaypal(details, data);
+                                            }}
+                                            onError={() => {
+                                                alert('error');
+                                            }}
+                                        />
+                                    </PayPalScriptProvider>
                                 </div>
-
                             ) : (
                                 <ButtonComponent
                                     onClick={() => handleAddOrder()}
@@ -343,9 +342,8 @@ const PaymentPage = () => {
                                     }}
                                     textbutton={'Thanh toán'}
                                     styleTextButton={{ color: '#fff', fontSize: '16px', fontWeight: 500 }}
-                                ></ButtonComponent>
+                                />
                             )}
-
                         </WrapperRight>
                     </div>
                 </div>
@@ -355,7 +353,6 @@ const PaymentPage = () => {
                             name="basic"
                             labelCol={{ span: 4 }}
                             wrapperCol={{ span: 20 }}
-                            // onFinish={onUpdateUser}
                             autoComplete="on"
                             form={form}
                         >
@@ -366,7 +363,6 @@ const PaymentPage = () => {
                             >
                                 <Inputcomponent value={stateUserDetail.name} onChange={handleOnchangeDetail} name="name" />
                             </Form.Item>
-
                             <Form.Item
                                 label="Phone"
                                 name="phone"
@@ -374,7 +370,6 @@ const PaymentPage = () => {
                             >
                                 <Inputcomponent value={stateUserDetail.phone} onChange={handleOnchangeDetail} name="phone" />
                             </Form.Item>
-
                             <Form.Item
                                 label="Address"
                                 name="address"
@@ -382,7 +377,6 @@ const PaymentPage = () => {
                             >
                                 <Inputcomponent value={stateUserDetail.address} onChange={handleOnchangeDetail} name="address" />
                             </Form.Item>
-
                             <Form.Item
                                 label="City"
                                 name="city"
@@ -393,9 +387,8 @@ const PaymentPage = () => {
                         </Form>
                     </Loading>
                 </ModalComponent>
-            </Loading >
-
-        </div >
+            </Loading>
+        </div>
     )
 }
 
